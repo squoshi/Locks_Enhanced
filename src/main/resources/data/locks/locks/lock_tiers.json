@@ -1,0 +1,7 @@
+{
+  "locks:wood_lock": 0,
+  "locks:iron_lock": 10,
+  "locks:gold_lock": 20,
+  "locks:steel_lock": 30,
+  "locks:diamond_lock": 40
+}

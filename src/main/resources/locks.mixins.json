@@ -1,0 +1,35 @@
+{
+  "required": true,
+  "package": "melonslise.locks.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "mixins": [
+    "AbstractFurnaceBlockEntityMixin",
+    "ChestBlockMixin",
+    "ChestBlockEntityMixin",
+    "ChunkMapMixin",
+    "LevelChunkMixin",
+    "ChunkAccessMixin",
+    "DoorBlockMixin",
+    "ExplosionMixin",
+    "BaseContainerBlockEntityMixin",
+    "LootDataManagerMixin",
+    "PistonBaseBlockMixin",
+    "PistonStructureResolverMixin",
+    "RandomizableContainerBlockEntityMixin",
+    "ServerLevelMixin",
+    "LevelMixin",
+    "accessor.ForgeHooksAccessor",
+    "accessor.LootPoolAccessor",
+    "accessor.LootTableAccessor",
+    "addlock.StructurePieceMixin",
+    "addlock.StructureTemplateMixin",
+    "addlock.WorldGenRegionMixin"
+  ],
+  "client": [
+    "client.WorldRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  },
+  "minVersion": "0.8"
+}
