@@ -51,9 +51,7 @@ import java.io.InputStreamReader;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
-import java.util.Deque;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.stream.Stream;
 
 import static melonslise.locks.common.config.LocksConfig.canEnchant;
@@ -271,6 +269,45 @@ public final class LocksUtil {
         return server.registryAccess().lookupOrThrow(Registries.ITEM).get(ResourceKey.create(Registries.ITEM, id)).get().get().getDefaultInstance().copy();
     }
 
-    public static void applyLockTier(WorldGenRegion wgr, BlockPos pos, ResourceLocation lootTable, RandomSource randomSource) {
+    public static void applyLockTier(WorldGenRegion wgr, BlockPos pos, ResourceLocation lootTable, RandomSource randomSource, MinecraftServer l, RandomizableContainerBlockEntity rbe) {
+        List<Lockable> lockables = ((ILockableProvider) wgr.getChunk(pos.getX() >> 4, pos.getZ() >> 4)).getLockables();
+
+        lockables.replaceAll(lock -> {
+            boolean contains = false;
+            for (BlockPos lockedPos : lock.bb.getContainedPos()) {
+                if (pos.equals(lockedPos)) {
+                    contains = true;
+                    break;
+                }
+            }
+            if (!contains) return lock;
+
+            if (LocksConfig.BLACKLIST_LOOT_TABLES.get().contains(lootTable.toString())) return null;
+
+            NonNullList<ItemStack> items = LocksUtil.simulateLootTable(lootTable, rbe, wgr.getLevel(), pos);
+            List<LockTierOrderReloadListener.LockTier> locks = LockTierOrderReloadListener.getLockTierOrder();
+
+            int totalValue = 0;
+
+            for (ItemStack item : items) {
+                totalValue += LootValues.getValue(item);
+            }
+
+            ResourceLocation newLock = null;
+            for (LockTierOrderReloadListener.LockTier tier : locks) {
+                if (totalValue >= tier.value()) {
+                    newLock = tier.id();
+                } else {
+                    break;
+                }
+            }
+
+            if (newLock == null) return null;
+
+            ItemStack stack = LocksUtil.getDefaultStack(newLock, l);
+            if (canEnchant(randomSource)) EnchantmentHelper.enchantItem(randomSource, stack, 5 + randomSource.nextInt(30), false);
+            return new Lockable(lock.bb, Lock.from(stack), lock.tr, stack, lock.id);
+        });
+        lockables.removeIf(Objects::isNull);
     }
 }
