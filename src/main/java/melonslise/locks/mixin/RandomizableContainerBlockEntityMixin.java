@@ -1,6 +1,5 @@
 package melonslise.locks.mixin;
 
-import melonslise.locks.Locks;
 import melonslise.locks.api.loot.LootValues;
 import melonslise.locks.common.config.LocksConfig;
 import melonslise.locks.common.data.LockTierOrderReloadListener;
@@ -50,27 +49,7 @@ public class RandomizableContainerBlockEntityMixin {
 
         List<Lockable> lockables = ((ILockableProvider) wgr.getChunk(pos.getX() >> 4, pos.getZ() >> 4)).getLockables();
 
-        if (LocksConfig.BLACKLIST_LOOT_TABLES.get().contains(lootTable.toString())) {
-            lockables.replaceAll(lock -> {
-                boolean contains = false;
-                for (BlockPos lockedPos : lock.bb.getContainedPos()) {
-                    if (pos.equals(lockedPos)) {
-                        contains = true;
-                        break;
-                    }
-                }
-                if (!contains) return lock;
-
-                return null;
-            });
-            lockables.removeIf(Objects::isNull);
-            return;
-        }
-
-        NonNullList<ItemStack> items = LocksUtil.simulateLootTable(lootTable, rbe, wgr.getLevel(), pos);
-
-        for (int i = 0; i < lockables.size(); i++) {
-            Lockable lock = lockables.get(i);
+        lockables.replaceAll(lock -> {
             boolean contains = false;
             for (BlockPos lockedPos : lock.bb.getContainedPos()) {
                 if (pos.equals(lockedPos)) {
@@ -78,8 +57,11 @@ public class RandomizableContainerBlockEntityMixin {
                     break;
                 }
             }
-            if (!contains) continue;
+            if (!contains) return lock;
 
+            if (LocksConfig.BLACKLIST_LOOT_TABLES.get().contains(lootTable.toString())) return null;
+
+            NonNullList<ItemStack> items = LocksUtil.simulateLootTable(lootTable, rbe, wgr.getLevel(), pos);
             List<LockTierOrderReloadListener.LockTier> locks = LockTierOrderReloadListener.getLockTierOrder();
 
             int totalValue = 0;
@@ -87,9 +69,6 @@ public class RandomizableContainerBlockEntityMixin {
             for (ItemStack item : items) {
                 totalValue += LootValues.getValue(item);
             }
-
-            Locks.LOGGER.info("Total value: " + totalValue);
-            Locks.LOGGER.info("Lock tiers: " + locks);
 
             ResourceLocation newLock = null;
             for (LockTierOrderReloadListener.LockTier tier : locks) {
@@ -100,20 +79,12 @@ public class RandomizableContainerBlockEntityMixin {
                 }
             }
 
-            Locks.LOGGER.info("New lock: " + newLock);
-
-            if (newLock == null) {
-                lockables.set(i, null);
-                continue;
-            }
+            if (newLock == null) return null;
 
             ItemStack stack = LocksUtil.getDefaultStack(newLock, l);
-            Locks.LOGGER.info("Lock stack: " + stack);
             if (canEnchant(randomSource)) EnchantmentHelper.enchantItem(randomSource, stack, 5 + randomSource.nextInt(30), false);
-            Lockable lck = new Lockable(lock.bb, Lock.from(stack), lock.tr, stack, lock.id);
-            Locks.LOGGER.info("Lockable: " + lck);
-            lockables.set(i, lck);
-        }
+            return new Lockable(lock.bb, Lock.from(stack), lock.tr, stack, lock.id);
+        });
         lockables.removeIf(Objects::isNull);
     }
 }
